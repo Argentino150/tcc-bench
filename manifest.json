@@ -1,0 +1,16 @@
+{
+  "name": "Avaliação de Armazenamento Client-Side",
+  "short_name": "BenchStorage",
+  "description": "Aplicação de testes de desempenho de LocalStorage, Session Storage e IndexedDB",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b1a1a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%238b1a1a'/%3E%3Ctext x='96' y='125' font-size='90' text-anchor='middle' fill='white' font-family='sans-serif'%3EBS%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

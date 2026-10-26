@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Avaliação de Desempenho — Armazenamento Client-Side</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#8b1a1a">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+<header>
+  <h1>Avaliação de Desempenho de Métodos de Armazenamento Client-Side</h1>
+  <p>LocalStorage &middot; Session Storage &middot; IndexedDB</p>
+</header>
+
+<main>
+  <section>
+    <h2>Ambiente de execução</h2>
+    <p class="nota">Registrado junto com os dados exportados, para permitir a reprodução do experimento.</p>
+    <pre id="ambiente"></pre>
+  </section>
+
+  <section>
+    <h2>Experimento</h2>
+    <p class="nota">
+      Quatro volumes (100, 1.000, 10.000 e 100.000 registros) &times; três mecanismos.
+      Cada cenário executa 15 repetições de aquecimento, descartadas, e 30 repetições válidas.
+    </p>
+    <button id="btn-verificar">Verificar conjunto de dados</button>
+    <button id="btn-executar" class="primario">Executar experimento</button>
+    <button id="btn-volume">Medir volume máximo</button>
+    <div class="barra-externa"><div id="barra">0%</div></div>
+    <p>Status: <span id="status">aguardando</span></p>
+  </section>
+
+  <section>
+    <h2>Cenário offline</h2>
+    <p class="nota">
+      Grave os dados, desative a conexão nas ferramentas do navegador, feche a aba,
+      reabra a aplicação e verifique quais mecanismos preservaram o conteúdo.
+    </p>
+    <button id="btn-persistir">Gravar dados de persistência</button>
+    <button id="btn-verificar-persistencia">Verificar persistência</button>
+    <button id="btn-exportar-persistencia">Exportar resultado do teste offline</button>
+  </section>
+
+  <section>
+    <h2>Resultados</h2>
+    <div id="resultados"></div>
+    <button id="btn-csv">Exportar CSV</button>
+    <button id="btn-json">Exportar JSON</button>
+  </section>
+
+  <section>
+    <h2>Registro de execução</h2>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
