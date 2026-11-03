@@ -12,6 +12,15 @@ import {
   REPETICOES
 } from './benchmark.js';
 import { gerarConjunto, validarConjunto, TAMANHO_REGISTRO_BYTES } from './dataset.js';
+import {
+  testarLeitura,
+  testarLeituraAposGravacao,
+  testarBloqueio,
+  AQUEC_COMP,
+  REP_COMP,
+  VOLUMES_LEITURA,
+  VOLUME_BLOQUEIO
+} from './complementar.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -31,9 +40,11 @@ const elResultados = $('#resultados');
 let ultimosResultados = null;
 let ultimoVolumeMaximo = null;
 let ultimaPersistencia = null;
+let ultimoComplementar = null;
+let ultimoAposGravacao = null;
 let ocupado = false;
 
-const BOTOES_LONGOS = ['#btn-executar', '#btn-volume', '#btn-verificar', '#btn-persistir'];
+const BOTOES_LONGOS = ['#btn-executar', '#btn-volume', '#btn-verificar', '#btn-persistir', '#btn-complementar', '#btn-apos-gravacao'];
 
 /**
  * Impede que uma segunda execução seja disparada enquanto a primeira está em
@@ -212,6 +223,96 @@ function resumir(resultados, ocorrencias) {
   }
 
   elResultados.innerHTML = html;
+}
+
+/* ---------------- testes complementares ---------------- */
+
+async function rodarComplementar() {
+  const adaptadores = criarAdaptadores();
+  const ws = adaptadores.filter((a) => a.sincrono);
+  const total =
+    (AQUEC_COMP + REP_COMP) * (VOLUMES_LEITURA.length * ws.length + adaptadores.length);
+  let feito = 0;
+  const avancar = () => progresso(++feito, total);
+  elStatus.textContent = 'Executando testes complementares...';
+  registrar('Testes complementares: leitura por chave × por posição e bloqueio da interface.');
+  const t0 = performance.now();
+  const leitura = await testarLeitura(ws, avancar, registrar);
+  // Ordem dos mecanismos invertida no segundo teste, como no experimento principal.
+  const bloqueio = await testarBloqueio([...adaptadores].reverse(), avancar, registrar);
+  ultimoComplementar = {
+    ambiente: {
+      ...coletarAmbiente(),
+      testes: 'complementares',
+      volumes_leitura: VOLUMES_LEITURA,
+      volume_bloqueio: VOLUME_BLOQUEIO,
+      aquecimentos: AQUEC_COMP,
+      repeticoes: REP_COMP,
+      longtask_api: (globalThis.PerformanceObserver?.supportedEntryTypes || []).includes('longtask')
+    },
+    leitura,
+    bloqueio
+  };
+  registrar(`Testes complementares concluídos em ${((performance.now() - t0) / 1000).toFixed(1)}s.`);
+  elStatus.textContent = 'Concluído';
+  resumirComplementar(ultimoComplementar);
+}
+
+async function rodarAposGravacao() {
+  const ws = criarAdaptadores().filter((a) => a.sincrono);
+  const total = (AQUEC_COMP + REP_COMP) * ws.length;
+  let feito = 0;
+  elStatus.textContent = 'Executando leitura após gravação...';
+  const linhas = await testarLeituraAposGravacao(ws, () => progresso(++feito, total), registrar);
+  ultimoAposGravacao = { ambiente: { ...coletarAmbiente(), testes: 'leitura_apos_gravacao' }, leitura_apos_gravacao: linhas };
+  const f = (x) => x.toFixed(1);
+  let html = '<table><thead><tr><th>Mecanismo</th><th>Posição, logo após gravar (ms)</th><th>Posição, após pausa (ms)</th><th>Chave, após pausa (ms)</th></tr></thead><tbody>';
+  for (const ad of ws) {
+    const g = linhas.filter((l) => l.mecanismo === ad.nome);
+    html += `<tr><td>${ad.nome}</td><td>${f(mediana(g.map((l) => l.posicao_imediata_ms)))}</td><td>${f(mediana(g.map((l) => l.posicao_apos_pausa_ms)))}</td><td>${f(mediana(g.map((l) => l.chave_apos_pausa_ms)))}</td></tr>`;
+  }
+  $('#resultados-complementar').innerHTML = html + '</tbody></table>';
+  registrar('Leitura após gravação concluída.');
+  elStatus.textContent = 'Concluído';
+}
+
+function mediana(a) {
+  const v = [...a].sort((x, y) => x - y);
+  const m = Math.floor(v.length / 2);
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+}
+
+function resumirComplementar(c) {
+  const f = (x) => (x == null ? '—' : x.toFixed(1));
+  let html =
+    '<table><thead><tr><th>Mecanismo</th><th>Volume</th>' +
+    '<th>Leitura por posição, mediana (ms)</th><th>Leitura por chave, mediana (ms)</th></tr></thead><tbody>';
+  const grupos = new Map();
+  for (const l of c.leitura) {
+    const k = `${l.mecanismo}|${l.volume}`;
+    if (!grupos.has(k)) grupos.set(k, { p: [], c: [] });
+    grupos.get(k).p.push(l.leitura_posicao_ms);
+    grupos.get(k).c.push(l.leitura_chave_ms);
+  }
+  for (const [k, g] of grupos) {
+    const [m, v] = k.split('|');
+    html += `<tr><td>${m}</td><td>${Number(v).toLocaleString('pt-BR')}</td><td>${f(mediana(g.p))}</td><td>${f(mediana(g.c))}</td></tr>`;
+  }
+  html +=
+    '</tbody></table><table><thead><tr><th>Mecanismo</th><th>Escrita, mediana (ms)</th>' +
+    '<th>Maior intervalo sem quadro, mediana (ms)</th><th>Intervalo normal (ms)</th></tr></thead><tbody>';
+  const gb = new Map();
+  for (const l of c.bloqueio) {
+    if (!gb.has(l.mecanismo)) gb.set(l.mecanismo, { e: [], g: [], b: [] });
+    gb.get(l.mecanismo).e.push(l.tempo_escrita_ms);
+    gb.get(l.mecanismo).g.push(l.maior_intervalo_sem_quadro_ms);
+    if (l.intervalo_normal_entre_quadros_ms != null) gb.get(l.mecanismo).b.push(l.intervalo_normal_entre_quadros_ms);
+  }
+  for (const [m, g] of gb) {
+    html += `<tr><td>${m}</td><td>${f(mediana(g.e))}</td><td>${f(mediana(g.g))}</td><td>${g.b.length ? f(mediana(g.b)) : '—'}</td></tr>`;
+  }
+  html += '</tbody></table>';
+  $('#resultados-complementar').innerHTML = html;
 }
 
 /* ---------------- verificação do conjunto ---------------- */
@@ -480,6 +581,18 @@ $('#btn-verificar').addEventListener('click', () => comTrava(verificarConjunto))
 $('#btn-executar').addEventListener('click', () => comTrava(rodarExperimento));
 $('#btn-volume').addEventListener('click', () => comTrava(rodarVolumeMaximo));
 $('#btn-persistir').addEventListener('click', () => comTrava(testarPersistencia));
+$('#btn-complementar').addEventListener('click', () => comTrava(rodarComplementar));
+$('#btn-apos-gravacao').addEventListener('click', () => comTrava(rodarAposGravacao));
+$('#btn-exportar-apos-gravacao').addEventListener('click', () => {
+  if (!ultimoAposGravacao) return registrar('Execute a leitura após gravação antes de exportar.');
+  const carimbo = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  baixar(`apos-gravacao-${carimbo}.json`, JSON.stringify(ultimoAposGravacao, null, 2), 'application/json');
+});
+$('#btn-exportar-complementar').addEventListener('click', () => {
+  if (!ultimoComplementar) return registrar('Execute os testes complementares antes de exportar.');
+  const carimbo = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  baixar(`complementar-${carimbo}.json`, JSON.stringify(ultimoComplementar, null, 2), 'application/json');
+});
 $('#btn-verificar-persistencia').addEventListener('click', verificarPersistencia);
 
 $('#btn-csv').addEventListener('click', () => {

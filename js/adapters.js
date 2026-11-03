@@ -58,6 +58,18 @@ class AdaptadorWebStorage {
     return saida;
   }
 
+  /**
+   * Leitura por chave conhecida (teste complementar): recupera cada registro
+   * diretamente pela chave, sem percorrer o armazenamento por posição.
+   */
+  async lerPorChave(ids) {
+    const saida = new Array(ids.length);
+    for (let i = 0; i < ids.length; i++) {
+      saida[i] = JSON.parse(this.storage.getItem(PREFIXO + ids[i]));
+    }
+    return saida;
+  }
+
   /** Quantidade de registros do experimento atualmente gravados. */
   async contar() {
     let n = 0;
