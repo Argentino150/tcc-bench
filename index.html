@@ -35,6 +35,22 @@
   </section>
 
   <section>
+    <h2>Testes complementares</h2>
+    <p class="nota">
+      (1) Leitura por chave conhecida &times; por posição no LocalStorage e no Session Storage
+      (1.000 e 10.000 registros). (2) Bloqueio da interface: maior intervalo sem quadro
+      enquanto cada mecanismo grava 10.000 registros. Mantenha esta aba visível e não
+      mexa no computador durante a execução.
+    </p>
+    <button id="btn-complementar" class="primario">Executar testes complementares</button>
+    <button id="btn-exportar-complementar">Exportar testes complementares</button>
+    <br>
+    <button id="btn-apos-gravacao">Leitura após gravação</button>
+    <button id="btn-exportar-apos-gravacao">Exportar leitura após gravação</button>
+    <div id="resultados-complementar"></div>
+  </section>
+
+  <section>
     <h2>Cenário offline</h2>
     <p class="nota">
       Grave os dados, desative a conexão nas ferramentas do navegador, feche a aba,

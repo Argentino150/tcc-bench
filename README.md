@@ -28,6 +28,9 @@ Ordem sugerida de uso:
 2. **Executar experimento** — 4 volumes × 3 mecanismos × 35 execuções.
 3. **Medir volume máximo** — inserção progressiva até o estouro de cota.
 4. **Exportar CSV** — gera o arquivo de medições.
+5. **Executar testes complementares** — leitura por chave × por posição e
+   bloqueio da interface (ver seção própria). Exporte com
+   **Exportar testes complementares**.
 
 ---
 
@@ -197,6 +200,27 @@ Session Storage os descarta, por definição da especificação.
 > exatamente o contrário do comportamento real.
 
 ---
+
+## Testes complementares (bench-v12)
+
+Acrescentados após a revisão do orientador, em `js/complementar.js`, com o
+mesmo protocolo (15 aquecimentos + 30 medições válidas).
+
+- **Leitura por chave conhecida × por posição** — no LocalStorage e no Session
+  Storage, com 1.000 e 10.000 registros gravados uma única vez. A leitura por
+  posição é a do experimento principal (`key(i)` + `getItem`); a leitura por
+  chave recupera cada registro diretamente com `getItem("bench:" + id)`. A
+  ordem dos dois métodos alterna a cada execução. Separa o custo da API do
+  custo do algoritmo de enumeração.
+- **Leitura após gravação** (botão próprio) — regrava os 10.000 registros a
+  cada execução e mede a leitura por posição na mesma tarefa da gravação, como
+  no experimento principal, depois de uma pausa (`setTimeout`) e por chave.
+- **Bloqueio da interface** — enquanto cada mecanismo grava 10.000 registros,
+  um laço de `requestAnimationFrame` registra o instante de cada quadro. O
+  maior intervalo entre dois quadros consecutivos que se sobrepõe à gravação é
+  o tempo em que a página não pôde ser redesenhada nem responder ao usuário.
+  Nos navegadores com Long Tasks API (Chromium), a soma das tarefas longas
+  também é registrada. A aba precisa ficar visível durante o teste.
 
 ## Limitações conhecidas
 

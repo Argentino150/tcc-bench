@@ -5,7 +5,7 @@
  * primeira visita, a aplicação carrega integralmente a partir do cache,
  * permitindo verificar sua disponibilidade com a conexão desativada.
  */
-const CACHE = 'bench-v10';
+const CACHE = 'bench-v12';
 const RECURSOS = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const RECURSOS = [
   './js/adapters.js',
   './js/benchmark.js',
   './js/dataset.js',
+  './js/complementar.js',
   './manifest.json'
 ];
 
